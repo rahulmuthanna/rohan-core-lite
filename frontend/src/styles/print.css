@@ -1,0 +1,35 @@
+/*
+ * Printing. "Print or save as PDF" opens the browser's print window.
+ * Only the document itself is printed: the menu, buttons and on-screen hints are left out.
+ */
+@media print {
+  @page {
+    margin: 18mm;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  .sidebar,
+  .page-header,
+  .screen-only,
+  .notice {
+    display: none !important;
+  }
+
+  .app {
+    display: block;
+  }
+
+  .main {
+    max-width: none;
+    padding: 0;
+  }
+
+  .document {
+    max-width: none;
+    padding: 0;
+    border: none;
+  }
+}
