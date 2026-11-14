@@ -1,0 +1,86 @@
+erDiagram
+    projects ||--o{ units : "has"
+    units ||--o{ cost_sheets : "is priced in"
+    customers ||--o{ cost_sheets : "receives"
+    cost_sheets ||--o{ quotations : "generates"
+    quotations ||--o| bookings : "converts to"
+    units ||--o| bookings : "is booked by"
+    bookings ||--|{ payment_milestones : "splits into 4"
+    payment_milestones ||--o{ payments : "collects"
+
+    projects {
+        bigint id PK "identity"
+        text name UK "NOT NULL, not blank"
+        timestamptz created_at "NOT NULL, default now"
+    }
+
+    units {
+        bigint id PK "identity"
+        bigint project_id FK "NOT NULL"
+        text unit_code UK "NOT NULL, e.g. RN-101"
+        text unit_type "NOT NULL, 1 BHK / 2 BHK / 3 BHK"
+        integer area_sqft "NOT NULL, above 0"
+        bigint listed_price_paise "NOT NULL, above 0"
+        text status "NOT NULL, AVAILABLE / BOOKED / SOLD, default AVAILABLE"
+        timestamptz created_at "NOT NULL, default now"
+        timestamptz updated_at "NOT NULL, kept current by trigger"
+    }
+
+    customers {
+        bigint id PK "identity"
+        text full_name "NOT NULL, trimmed, 2 to 100 characters"
+        text mobile UK "NOT NULL, exactly 10 digits"
+        text email "NOT NULL, lowercase, valid shape, max 254"
+        timestamptz created_at "NOT NULL, default now"
+        timestamptz updated_at "NOT NULL, kept current by trigger"
+    }
+
+    cost_sheets {
+        bigint id PK "identity"
+        text cost_sheet_number UK "NOT NULL, generated, e.g. CS-2026-0001"
+        bigint unit_id FK "NOT NULL"
+        bigint customer_id FK "NOT NULL"
+        bigint listed_price_paise "NOT NULL, frozen copy of unit price"
+        integer discount_bps "NOT NULL, 0 to 200, 100 = 1 percent"
+        bigint discount_amount_paise "NOT NULL, CHECK = listed x bps / 10000 rounded"
+        bigint final_price_paise "NOT NULL, CHECK = listed - discount"
+        timestamptz created_at "NOT NULL, row frozen by trigger"
+    }
+
+    quotations {
+        bigint id PK "identity"
+        text quotation_number UK "NOT NULL, generated, e.g. QT-2026-0001"
+        bigint cost_sheet_id FK "NOT NULL, money + unit + customer read from here"
+        text status "NOT NULL, DRAFT / SENT / ACCEPTED, default DRAFT"
+        date issue_date "NOT NULL, default today in India"
+        date valid_until "NOT NULL, CHECK = issue_date + 7"
+        timestamptz created_at "NOT NULL, default now"
+        timestamptz updated_at "NOT NULL, kept current by trigger"
+    }
+
+    bookings {
+        bigint id PK "identity"
+        text booking_number UK "NOT NULL, generated, e.g. BK-2026-0001"
+        bigint quotation_id FK, UK "NOT NULL, one booking per quotation"
+        bigint unit_id FK, UK "NOT NULL, one booking per unit"
+        timestamptz booked_at "NOT NULL, default now, row frozen by trigger"
+    }
+
+    payment_milestones {
+        bigint id PK "identity"
+        bigint booking_id FK "NOT NULL"
+        smallint sequence_no "NOT NULL, 1 to 4, UNIQUE with booking_id"
+        text stage "NOT NULL, BOOKING / FOUNDATION / STRUCTURE / HANDOVER"
+        smallint percent "NOT NULL, 10 / 20 / 30 / 40, CHECK matches sequence and stage"
+        bigint amount_due_paise "NOT NULL, above 0"
+        timestamptz created_at "NOT NULL, row frozen by trigger"
+    }
+
+    payments {
+        bigint id PK "identity"
+        bigint milestone_id FK "NOT NULL"
+        bigint amount_paise "NOT NULL, above 0"
+        date payment_date "NOT NULL"
+        text payment_reference UK "NOT NULL, uppercase, trimmed, 1 to 50, unique across all payments"
+        timestamptz created_at "NOT NULL, row frozen by trigger"
+    }
