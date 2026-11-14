@@ -1,0 +1,24 @@
+# Local PostgreSQL for development.
+# Start:  docker compose up -d db
+# Stop:   docker compose down          (add -v to also delete the stored data)
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: rohan_core_lite_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rohan
+      POSTGRES_PASSWORD: rohan_dev_password
+      POSTGRES_DB: rohan_core_lite
+    ports:
+      - "5433:5432"
+    volumes:
+      - rohan_core_lite_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rohan -d rohan_core_lite"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  rohan_core_lite_pgdata:

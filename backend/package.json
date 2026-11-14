@@ -1,0 +1,26 @@
+{
+  "name": "rohan-core-lite-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "tsx src/scripts/db-migrate.ts",
+    "db:seed": "tsx src/scripts/db-seed.ts",
+    "db:reset": "tsx src/scripts/db-reset.ts",
+    "db:verify": "tsx src/scripts/db-verify.ts"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.10",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
