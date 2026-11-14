@@ -19,28 +19,58 @@ A sales executive picks an available flat, prices it for a customer with an opti
 
 ### Prerequisites
 
-- **Node.js 22 or newer**
-- **PostgreSQL** — either Docker Desktop (recommended, uses `docker-compose.yml`) or any PostgreSQL 14+ server you can create databases on
+- **Node.js 22 or newer** (`node -v`)
+- **PostgreSQL 14 or newer**, in one of two ways:
+  - **Option A — Docker Desktop** (simplest: nothing to configure)
+  - **Option B — a PostgreSQL you installed yourself** (for example from [postgresql.org/download](https://www.postgresql.org/download/))
 
-### 1. Start the database
+### 1. Set up the database
+
+#### Option A: Docker
+
+From the repository root:
 
 ```bash
 docker compose up -d db
+docker compose ps        # wait until the db service shows "healthy"
 ```
 
-This starts PostgreSQL 16 on **port 5433** with user `rohan`, password `rohan_dev_password` and database `rohan_core_lite` (local development values only).
+This starts PostgreSQL 16 on **port 5433** with user `rohan`, password `rohan_dev_password` and an empty database `rohan_core_lite`. These match `backend/.env.example` exactly, so in step 2 you just copy that file. Go to step 2.
 
-> Using your own PostgreSQL instead? Skip this step and edit `DATABASE_URL` and `TEST_DATABASE_URL` in `backend/.env` (step 2) to point at your server. The test database name must end in `rohan_core_lite_test`; it is created automatically on the first test run, so the user needs permission to create databases.
+#### Option B: your own PostgreSQL
+
+1. **Create the application database.** Only this one; the test database is created automatically later. Connect as a user that can create databases (the `postgres` superuser is easiest) and run:
+
+   ```bash
+   psql -U postgres -h localhost -p 5432 -c "CREATE DATABASE rohan_core_lite;"
+   ```
+
+   Or run `CREATE DATABASE rohan_core_lite;` in pgAdmin's Query Tool. On Windows, `psql` lives in `C:\Program Files\PostgreSQL\<version>\bin\` if it is not on your PATH.
+
+2. **Write `backend/.env`** (instead of copying the example in step 2) with your own user, password and port. A standard install listens on **5432**, not 5433:
+
+   ```text
+   DATABASE_URL=postgres://postgres:YOUR_PASSWORD@localhost:5432/rohan_core_lite
+   TEST_DATABASE_URL=postgres://postgres:YOUR_PASSWORD@localhost:5432/rohan_core_lite_test
+   PORT=4000
+   NODE_ENV=development
+   ```
+
+   - The user needs permission to **create databases**, because the first `npm test` creates `rohan_core_lite_test` itself. The `postgres` superuser has this.
+   - `TEST_DATABASE_URL` must point at a **different** database from `DATABASE_URL`, because the tests wipe it.
+   - If your password contains `@`, `:`, `/` or `#`, URL-encode it (for example `@` becomes `%40`).
 
 ### 2. Backend (API on port 4000)
 
 ```bash
 cd backend
-cp .env.example .env
+cp .env.example .env     # Option A only. Windows Command Prompt: copy .env.example .env
 npm install
-npm run db:reset     # builds the schema and loads the 4 projects and 12 units
-npm run dev          # Rohan Core Lite API listening on http://localhost:4000
+npm run db:reset         # creates the tables and loads the 4 projects and 12 units
+npm run dev              # Rohan Core Lite API listening on http://localhost:4000
 ```
+
+`npm run db:reset` should end with `Database reset complete: schema rebuilt, migrations applied, seed loaded.` To confirm everything works end to end, `npm test` should end with `Tests  99 passed (99)`.
 
 ### 3. Frontend (app on port 5173)
 
@@ -52,7 +82,20 @@ npm install
 npm run dev          # Local: http://localhost:5173/
 ```
 
-Open **http://localhost:5173**. The Vite dev server forwards every `/api` request to the backend, so there is no CORS setup and no backend address in the frontend code.
+Open **http://localhost:5173**. The Vite dev server forwards every `/api` request to the backend, so there is no CORS setup and no backend address in the frontend code. Keep both terminals running while you use the app.
+
+### Troubleshooting
+
+| Message | Cause and fix |
+|---|---|
+| `database "rohan_core_lite" does not exist` | Option B step 1 was skipped. Create the database, then run `npm run db:reset` again. |
+| `ECONNREFUSED ... 5433` or `... 5432` | PostgreSQL is not running, or the port in `DATABASE_URL` is wrong. Docker uses 5433; a normal install uses 5432. |
+| `password authentication failed for user ...` | The user or password in `backend/.env` does not match your PostgreSQL. |
+| `permission denied to create database` (during `npm test`) | The database user cannot create databases. Use the `postgres` superuser, or run `ALTER USER your_user CREATEDB;` as a superuser. |
+| `Missing required environment variable DATABASE_URL` | `backend/.env` does not exist. Create it as in step 1 or 2. |
+| `db:verify needs a fresh database` | Run `npm run db:reset` first; `db:verify` only runs on a database with no customers. |
+| Port 4000 or 5173 already in use | Another program is using it. Close it; the ports are fixed on purpose. |
+| The app shows an error loading data | The backend is not running. Start `npm run dev` in `backend/`. |
 
 ---
 
